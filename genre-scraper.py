@@ -12,6 +12,7 @@ import bs4
 from bs4 import BeautifulSoup
 import multiprocessing
 from multiprocessing.dummy import Pool
+from tqdm import tqdm
 
 genre_list = ['portrait', 'landscape', 'genre-painting', 'abstract', 'religious-painting', 
               'cityscape', 'sketch-and-study', 'figurative', 'illustration', 'still-life', 
@@ -62,6 +63,7 @@ def get_painting_list(count, typep, searchword):
 
 
 def downloader(link, genre, output_dir):
+    global pbar
     global num_downloaded, num_images
     item, file = link
     filepath = file.split('/')
@@ -71,14 +73,14 @@ def downloader(link, genre, output_dir):
         time.sleep(0.2)  # try not to get a 403
         urllib.request.urlretrieve(file, savepath)
         num_downloaded += 1
-        if num_downloaded % 100 == 0:
-            print('downloaded number %d / %d...' % (num_downloaded, num_images))
+        pbar.update(1)        
     except Exception as e:
         print("failed downloading " + str(file), e) 
 
 
 def main(typep, searchword, num_pages, output_dir):
     global num_images
+    global pbar
     print('gathering links to images... this may take a few minutes')
     threadpool = Pool(multiprocessing.cpu_count()-1)
     numbers = list(range(1, num_pages))
@@ -95,6 +97,7 @@ def main(typep, searchword, num_pages, output_dir):
         os.mkdir('%s/%s'%(output_dir, searchword))
     
     print('attempting to download %d images'%num_images)
+    pbar = tqdm(total=num_images)
     threadpool = Pool(multiprocessing.cpu_count()-1)
     threadpool.starmap(downloader, zip(enumerate(items), itertools.repeat(searchword), itertools.repeat(output_dir)))
     threadpool.close    
